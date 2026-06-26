@@ -1,0 +1,35 @@
+{
+  "name": "scraper-jurisprudencia-pj",
+  "version": "0.1.0",
+  "description": "Scraper en TypeScript para el buscador de Jurisprudencia del Poder Judicial del Perú. Navega los resultados paginados, extrae los datos de cada resolución y descarga los PDFs, manejando rate limiting (429).",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "ts-node src/index.ts",
+    "scrape": "ts-node src/index.ts",
+    "retry": "ts-node src/index.ts --retry-failed",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "node --require ts-node/register --test test/**/*.test.ts"
+  },
+  "keywords": [
+    "scraper",
+    "typescript",
+    "poder-judicial",
+    "jurisprudencia",
+    "jsf",
+    "richfaces"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.18.1",
+    "axios-cookiejar-support": "^7.0.0",
+    "cheerio": "^1.2.0",
+    "tough-cookie": "^6.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.3"
+  }
+}
