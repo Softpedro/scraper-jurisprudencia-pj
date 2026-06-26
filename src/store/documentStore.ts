@@ -14,9 +14,9 @@ import { Documento } from "../parser/types";
 
 const DATA_FILE = path.join(OUTPUT_DIR, "data.json");
 
-/** Clave única de un documento: el UUID del PDF si existe; si no, nro+expediente. */
+/** Clave única de un documento: el uuid si existe; si no, el N° de expediente. */
 function keyOf(d: Documento): string {
-  return d.pdfUuid ?? `${d.nro}|${d.expediente}`;
+  return d.uuid ?? d.nroExpediente;
 }
 
 export class DocumentStore {

@@ -17,8 +17,8 @@ export interface Checkpoint {
   lastCompletedPage: number;
   totalPages: number;
   totalRecords: number;
-  /** Sector usado en la búsqueda ("" = Todos). Evita reanudar con otro filtro. */
-  sector: string;
+  /** Término de búsqueda. Evita reanudar con una búsqueda distinta. */
+  term: string;
   /** Marca de tiempo del último guardado (ISO). */
   updatedAt: string;
 }

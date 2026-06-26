@@ -4,60 +4,73 @@ Objetivo: https://jurisprudencia.pj.gob.pe/jurisprudenciaweb/faces/page/resultad
 
 ## 1. Tecnología del sitio
 
-- **JSF (Mojarra) + RichFaces** (a diferencia de PrimeFaces). Confirmado por
-  `RichFaces.ajax(...)`, clases `rf-pp-*`, `jsf.util.chain` y los popups RichFaces.
-- Carga jQuery 1.11.3 + Bootstrap. El AJAX de RichFaces 4 usa el mecanismo estándar
-  de JSF 2 (`<partial-response>`), así que el parser de respuestas parciales se reutiliza.
-- El `GET` inicial entrega `JSESSIONID` (cookie + en la URL `;jsessionid=...`) y un
-  `javax.faces.ViewState` **corto** (token tipo `-2633..:4614..`) → *server-side state
-  saving*: hay que reusar siempre el último ViewState recibido.
+- **JSF (Mojarra) + RichFaces 4.2.2**. jQuery 1.11.3 + Bootstrap.
+- El `GET` inicial entrega `JSESSIONID` (cookie) y un `javax.faces.ViewState`
+  **corto** (token `nnn:mmm`) → *server-side state saving*: hay que reusar siempre
+  el último ViewState recibido.
+- Detalle clave: la búsqueda y la paginación son **full postback** del formulario
+  `formBuscador` que devuelven **HTML completo** (no el AJAX binario de RichFaces).
+  Por eso se parsea directo con cheerio, sin tocar las respuestas AJAX.
 
-## 2. GET inicial  ✅
-
-```
-GET /jurisprudenciaweb/faces/page/resultado.xhtml
-→ 200, set-cookie: JSESSIONID=...; Path=/jurisprudenciaweb
-→ <input name="javax.faces.ViewState" value="...:...">
-```
-
-## 3. Formulario de búsqueda  🟡 (pendiente capturar el POST real)
-
-- Form: **`formBuscador`**.
-- Campo de texto full-text: **`formBuscador:txtBusqueda`** (maxlength 200;
-  "El texto ingresado se buscará en el contenido de las resoluciones").
-- Filtros/opciones detectados: `formBuscador:optBaseLegal`, `optResultado`, `optResumen`,
-  `optTema` (ámbitos de búsqueda).
-- Tabla de resultados: **`formBuscador:panealJur`** (vacía hasta ejecutar una búsqueda).
-- El disparo de la búsqueda es **AJAX de RichFaces** y no se ve en el HTML estático:
-  hay que capturar el POST real en DevTools.
+## 2. Flujo completo (validado)
 
 ```
-TODO: pegar aquí el cURL + payload + (trozo de) response del POST de búsqueda.
-Campos a confirmar: javax.faces.source, javax.faces.partial.execute/render,
-el id del botón de buscar, y params propios de RichFaces.
+GET  inicio.xhtml                  → sesión + ViewState + form de búsqueda GENERAL
+POST inicio.xhtml (lupa GENERAL)   → 302 → resultado.xhtml (página 1 de resultados)
+POST resultado.xhtml (spinner+IR)  → 302 → resultado.xhtml (página N)
+GET  ServletDescarga?uuid=...       → PDF (application/octet-stream)
 ```
 
-## 4. Paginación  🔲 (pendiente)
+> El 302 redirige a `http://`; hay que forzar `https://` al seguirlo.
+
+## 3. Búsqueda GENERAL  ✅
+
+En `inicio.xhtml`, el campo es `formBuscador:txtBusqueda` y la lupa es un
+`input[type=image]` cuyo `mojarra.jsfcljs` añade parámetros extra:
 
 ```
-TODO: capturar el POST al cambiar de página (RichFaces dataScroller / similar).
+forward=buscar
+busqueda=especializada
+formBuscador:j_idtNN=...         (el botón)
+formBuscador:j_idtNN=21          (orden = Fecha Resolución)
+formBuscador:j_idtNN=DESC        (forma)
+formBuscador:j_idtNN=Principal   (pestaña)
+formBuscador:j_idtNN=1
 ```
 
-## 5. Descarga del PDF  🔲 (pendiente)
+El scraper descubre el botón dinámicamente (el `input[type=image]` cuyo mojarra
+tiene `forward=buscar` y `Principal`), serializa **todos** los campos del form,
+fija `txtBusqueda` y hace el POST. Búsqueda de prueba: "contrato de trabajo" →
+**17 667 resultados, 1 767 páginas** (10 por página).
 
+## 4. Paginación  ✅
+
+En la página de resultados hay un `spinner` (campo de texto con el número de
+página) y un botón **IR** (`input[type=submit]`). Se reenvía el formulario con
+`spinner = N` + el botón IR. El número de página es **absoluto** → se salta
+directo a cualquier página (clave para reanudar). El máximo de páginas viene en
+el script del spinner (`maxValue: 1767`).
+
+## 5. Descarga del PDF  ✅
+
+Cada resolución trae un enlace **directo**:
+
+```html
+<a href="/jurisprudenciaweb/ServletDescarga?uuid=ed05892f-6952-4c79-ac3d-8c4614818d59">
 ```
-TODO: capturar el request al abrir/descargar el PDF de una resolución.
-Confirmar: GET directo vs POST (mojarra.jsfcljs), Content-Type, Content-Disposition.
-```
 
-## 6. Rate limiting (429)
+`GET` a esa URL → `application/octet-stream` con
+`Content-Disposition: attachment;filename=Resolucion_..._....pdf`. **No requiere
+postback** (más simple que OEFA). El nombre del archivo se toma del header.
 
-Estrategia heredada del motor (`src/util/backoff.ts`): reintentos con backoff
-exponencial ante 429/5xx/red, respeto de `Retry-After`, y log de fallidos.
+## 6. Datos extraídos por resolución
 
-## Notas de reutilización
+Del panel `div.rf-p` de cada resultado: recurso, N° de expediente, pretensión /
+delito, tipo de resolución, fecha, sala suprema, norma de derecho interno,
+sumilla, palabras clave y el `uuid`.
 
-Del scraper de OEFA (mismo stack JSF) se reutiliza tal cual: cliente HTTP con sesión,
-extracción de ViewState, parseo de `<partial-response>`, backoff, store JSON, checkpoint
-y la estructura de tests. Se reescribe la capa específica del sitio: búsqueda, paginación,
-descarga y el parser de la tabla de resultados.
+## 7. Rate limiting (429)
+
+Manejo en `src/util/backoff.ts`: reintentos con backoff exponencial ante
+429/5xx/red, respeto de `Retry-After`, delay entre peticiones y log de fallidos
+(`output/failed.json`) reprocesable con `npm run retry`.

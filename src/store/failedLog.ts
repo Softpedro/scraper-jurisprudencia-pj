@@ -13,16 +13,13 @@ import { OUTPUT_DIR } from "../config";
 const FAILED_FILE = path.join(OUTPUT_DIR, "failed.json");
 
 export interface FailedDownload {
-  /** UUID del PDF (clave única). */
-  pdfUuid: string;
-  expediente: string;
-  nroResolucion: string;
-  /** Página donde estaba la fila (para reubicarla al reintentar). */
+  /** UUID de la resolución (clave única). */
+  uuid: string;
+  nroExpediente: string;
+  /** Página donde estaba la resolución (para reubicarla al reintentar). */
   page: number;
-  /** Índice de fila (`data-ri`). */
-  rowIndex: number;
-  /** Sector usado en la búsqueda. */
-  sector: string;
+  /** Término de búsqueda usado. */
+  term: string;
   /** Motivo del fallo (mensaje del último error). */
   reason: string;
   /** Intentos realizados antes de rendirse. */
@@ -39,7 +36,7 @@ export class FailedLog {
       const arr = JSON.parse(
         fs.readFileSync(FAILED_FILE, "utf8")
       ) as FailedDownload[];
-      for (const f of arr) this.items.set(f.pdfUuid, f);
+      for (const f of arr) this.items.set(f.uuid, f);
     } catch {
       // Aún no existe el archivo: empezamos vacíos.
     }
@@ -47,17 +44,17 @@ export class FailedLog {
 
   /** Anota (o actualiza) un fallo y persiste de inmediato. */
   add(rec: FailedDownload): void {
-    this.items.set(rec.pdfUuid, rec);
+    this.items.set(rec.uuid, rec);
     this.save();
   }
 
   /** Quita un fallo (porque se descargó bien) y persiste. */
-  remove(pdfUuid: string): void {
-    if (this.items.delete(pdfUuid)) this.save();
+  remove(uuid: string): void {
+    if (this.items.delete(uuid)) this.save();
   }
 
-  has(pdfUuid: string): boolean {
-    return this.items.has(pdfUuid);
+  has(uuid: string): boolean {
+    return this.items.has(uuid);
   }
 
   all(): FailedDownload[] {

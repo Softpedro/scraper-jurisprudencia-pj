@@ -15,6 +15,18 @@ export const SEARCH_PAGE_PATH =
 
 export const SEARCH_PAGE_URL = `${BASE_URL}${SEARCH_PAGE_PATH}`;
 
+/** Página de Inicio: ahí está el formulario que lanza la búsqueda GENERAL. */
+export const INICIO_PAGE_PATH =
+  process.env.INICIO_PAGE_PATH ?? "/jurisprudenciaweb/faces/page/inicio.xhtml";
+
+export const INICIO_PAGE_URL = `${BASE_URL}${INICIO_PAGE_PATH}`;
+
+/** Servlet de descarga de PDFs (GET directo con ?uuid=...). */
+export const SERVLET_DESCARGA_PATH =
+  process.env.SERVLET_DESCARGA_PATH ?? "/jurisprudenciaweb/ServletDescarga";
+
+export const SERVLET_DESCARGA_URL = `${BASE_URL}${SERVLET_DESCARGA_PATH}`;
+
 /** User-Agent de navegador real: muchos sitios JSF rechazan clientes "raros". */
 export const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
@@ -41,5 +53,5 @@ export const RETRY_BASE_DELAY_MS = Number(process.env.RETRY_BASE_DELAY_MS ?? 1_0
 /** Tope del backoff exponencial (ms) para no esperar indefinidamente. */
 export const RETRY_MAX_DELAY_MS = Number(process.env.RETRY_MAX_DELAY_MS ?? 30_000);
 
-/** Término de búsqueda full-text (campo `txtBusqueda`). Vacío = depende del sitio. */
-export const SEARCH_TERM = process.env.SEARCH_TERM ?? "";
+/** Término de búsqueda full-text (campo `txtBusqueda`). El sitio exige un término. */
+export const SEARCH_TERM = process.env.SEARCH_TERM ?? "contrato de trabajo";
