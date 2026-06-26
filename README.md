@@ -25,9 +25,10 @@ npm install
 ## Uso
 
 ```bash
-npm run scrape        # busca, recorre resultados y descarga PDFs
-npm run retry         # reintenta las descargas que quedaron en output/failed.json
-npm test              # tests unitarios
+npm run scrape              # busca, recorre resultados y descarga PDFs
+npm run retry               # reintenta las descargas de output/failed.json
+npm test                    # tests unitarios
+npm run scrape -- --help    # ayuda del CLI (uso, variables, salida)
 ```
 
 ### Variables de entorno
@@ -67,6 +68,27 @@ clave, `uuid` y el archivo PDF descargado.
 - **Descargas idempotentes**: no re-descarga un PDF ya presente en disco.
 - **Manejo de 429**: cada descarga se envuelve en backoff exponencial (con
   `Retry-After`); lo que no se logra queda en `failed.json` para `npm run retry`.
+
+## Tests
+
+Tests unitarios con el runner nativo de Node (`node:test`), sin dependencias extra:
+
+```bash
+npm test
+```
+
+- `parser/results` — extrae los campos de cada resolución contra un fixture con la
+  estructura real (incluye una resolución sin sumilla) y lee la paginación.
+- `util/backoff` — reintenta ante 429/5xx/red, se rinde ante errores no recuperables
+  y respeta el tope de reintentos.
+
+## Nota sobre el desarrollo
+
+El motor JSF (sesión, ViewState, paginación, descarga, backoff de 429, checkpoint) se
+desarrolló y probó primero contra el sitio de pruebas que sugiere el reto
+([OEFA](https://publico.oefa.gob.pe/repdig/consulta/consultaTfa.xhtml), sin VPN) y luego
+se adaptó al Poder Judicial. Ambos son **JSF**, pero el PJ usa **RichFaces** con un flujo
+de _full postback_ (HTML completo) y descarga directa por `ServletDescarga`.
 
 ## Licencia
 
